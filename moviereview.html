@@ -1,0 +1,333 @@
+<head>
+	<meta charset="UTF-8">
+	<title>Movie Reviews</title>
+	<!-- Bootstrap CSS -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.1.0/css/bootstrap.min.css">
+	<style>
+body {
+  background-image: url('http://mi-linux.wlv.ac.uk/~2228092/zoro');
+  background-size: 1920px 1080px; /* set the width and height of the image */
+  font-family: Arial, sans-serif;
+}
+
+		.container {
+			margin-top: 50px;
+			background-color: #ffffffbb;
+      color:rgb(0, 0, 0);
+			padding: 30px;
+			border-radius: 10px;
+			box-shadow: 0px 0px 10px rgba(0,0,0,0.3);
+		}
+		#mainTitle {
+			text-align: center;
+			margin-bottom: 20px;
+			color: #d90036;
+			text-shadow: 0px 0px 5px rgba(0,0,0,0.3);
+		}
+		.table td {
+			vertical-align: middle;
+		}
+		#addButton {
+      
+			margin-top: 20px;
+			background-color: #d9000b;
+			color: #fff;
+			border: none;
+			border-radius: 5px;
+			padding: 10px 20px;
+			cursor: pointer;
+			transition: background-color 0.2s;
+		}
+		#addButton:hover {
+			background-color: #812430;
+		}
+    #updateButton {
+      display: none;
+			margin-top: 20px;
+			background-color: #d9000b;
+			color: #fff;
+			border: none;
+			border-radius: 5px;
+			padding: 10px 20px;
+			cursor: pointer;
+			transition: background-color 0.2s;
+		}
+		#updateButton:hover {
+			background-color: #812430;
+		}
+		.form-control:focus {
+			border-color: #7000d9;
+      color: rgb(0, 0, 0);
+			box-shadow: none;
+		}
+		.edit-review {
+  display: inline-block;
+  color: #000000;
+  visibility: visible;
+}
+
+.delete-review {
+  display: inline-block;
+  margin-left: 2px;
+  color: #000000;
+  visibility: visible;
+}
+
+.table-row:hover .edit-review,
+.table-row:hover .delete-review {
+  color: #ffffff;
+  visibility: visible;
+}
+
+
+
+	</style>
+</head>
+
+<body>
+	<div class="container">
+	    <h1 id="mainTitle">Movie Reviews</h1>
+	    <table class="table table-striped">
+	      <tbody id="reviewList">
+	      </tbody>
+	    </table>
+	    
+	    <form id="reviewForm">
+	    	<div class="row">
+	    		<div class="col-md-6">
+	    			<div class="form-group">
+	    				<label for="movieName">Movie Name</label>
+	    				<input type="text" class="form-control" id="movieName" required>
+	    			</div>
+	    		</div>
+	    		<div class="col-md-6">
+	    			<div class="form-group">
+	    				<label for="directorName">Director Name</label>
+	    				<input type="text" class="form-control" id="directorName" required>
+	    			</div>
+	    		</div>
+	    		<div class="col-md-6">
+	    			<div class="form-group">
+	    				<label for="movieRating">Movie Rating</label>
+	    				<select class="form-control" id="movieRating">
+	    					<option value="1">1</option>
+	    					<option value="2">2</option>
+	    					<option value="3">3</option>
+	    					<option value="4">4</option>
+	    					<option value="5">5</option>
+	    				</select>
+	    			</div>
+	    		</div>
+	    	</div>
+	    	<div class="form-group">
+	    		<label for="reviewText">Review</label>
+	    		<textarea class="form-control" id="reviewText" rows="3" required></textarea>
+	    	</div>
+	    	<div class="form-group">
+	    		<label for="releaseDate">Release Date</label>
+	    		<input type="date" class="form-control" id="releaseDate" required>
+	    	</div>
+	    	<button type="submit" id="addButton">Add Review</button>
+	    	<button type="update" id="updateButton">Update Review</button>
+	    </form>
+	</div>
+</body>
+
+        <!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Our Firebase code -->
+<script type="module">
+  // Import required Firebase services
+  import { doc } from 'https://www.gstatic.com/firebasejs/9.18.0/firebase-firestore.js';
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.18.0/firebase-app.js";
+import {
+  Firestore,
+  getFirestore,
+  onSnapshot,
+  query,
+  collection,
+  orderBy,
+  addDoc,
+  getDoc,
+  updateDoc,
+  deleteDoc // add this line to import deleteDoc function
+} from 'https://www.gstatic.com/firebasejs/9.18.0/firebase-firestore.js'
+
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+  apiKey: "AIzaSyAZYfDYXau44UcajpTiAhgLXVmI4STdySI",
+  authDomain: "cs0222228092.firebaseapp.com",
+  projectId: "cs0222228092",
+  storageBucket: "cs0222228092.appspot.com",
+  messagingSenderId: "590163852166",
+  appId: "1:590163852166:web:2d296608c58fdb3d4e8a07",
+  measurementId: "G-C2EN72PEWF"
+};
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  // Get a live data snapshot (i.e. auto-refresh) of our Reviews collection
+  const q = query(collection(db, "movie_review"), orderBy("movie_name"));
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+
+    // Empty HTML table
+    $('#reviewList').empty();
+
+   // Hide the update button by default
+$("#updateButton").hide();
+
+    // Add button pressed
+    $("#addButton").off("click").on("click", function(event) {
+      event.preventDefault();
+
+      const movieName = $("#movieName").val();
+      const directorName = $("#directorName").val();
+      const movieRating = $("#movieRating").val();
+      const reviewText = $("#reviewText").val();
+      const releaseDate = $("#releaseDate").val();
+
+      // Create a new document in the movie_review collection
+      addDoc(collection(db, "movie_review"), {
+        movie_name: movieName,
+        director_name: directorName,
+        movie_rating: movieRating,
+        movie_review: reviewText,
+        release_date: releaseDate
+      })
+      .then((docRef) => {
+        console.log("Document written with ID: ", docRef.id);
+      })
+      .catch((error) => {
+        console.error("Error adding document: ", error);
+      });
+
+      // Reset form
+      $("#movieName").val('');
+      $("#directorName").val('');
+      $("#movieRating").val('1');
+      $("#reviewText").val('');
+      $("#releaseDate").val('');
+    });
+
+
+    // Event listener for edit button click
+    $('#reviewList').on('click', '.edit-review', function() {
+      // Get the review ID from the data attribute
+      const reviewId = $(this).data('review-id');
+      // Get the review data from the Firestore database
+      const docRef = doc(db, "movie_review", reviewId);
+      getDoc(docRef).then((doc) => {
+        if (doc.exists()) {
+          const review = doc.data();
+          // Fill in the form fields with the review data
+          $('#movieName').val(review.movie_name);
+          $('#directorName').val(review.director_name);
+          $('#movieRating').val(review.movie_rating);
+          $('#reviewText').val(review.movie_review);
+          $('#releaseDate').val(review.release_date);
+// Change the form submit button to an update button
+// Add the review ID as a data attribute to the update button
+$('#updateButton').data('review-id', reviewId);
+$('#updateButton').show();
+    } else {
+      console.log("No such document!");
+    }
+  }).catch((error) => {
+    console.log("Error getting document:", error);
+  });
+});
+// Event listener for update button click
+$('#updateButton').on('click', function(event) {
+  event.preventDefault();
+
+  const movieName = $('#movieName').val();
+  const directorName = $('#directorName').val();
+  const movieRating = $('#movieRating').val();
+  const reviewText = $('#reviewText').val();
+  const releaseDate = $('#releaseDate').val();
+
+  // Get the review ID from the data attribute
+  const reviewId = $('#updateButton').data('review-id');
+
+  // Update the document in the movie_review collection
+  updateDoc(doc(db, 'movie_review', reviewId), {
+    movie_name: movieName,
+    director_name: directorName,
+    movie_rating: movieRating,
+    movie_review: reviewText,
+    release_date: releaseDate
+  })
+  .then(() => {
+    console.log('Document updated successfully!');
+    // Clear the data-review-id attribute
+    $('#updateButton').data('review-id', '');
+    // Hide the update button
+    $('#updateButton').hide();
+    // Change the form submit button back to an add button
+    $('#addButton').show();
+    // Reset form
+    $("#movieName").val('');
+    $("#directorName").val('');
+    $("#movieRating").val('1');
+    $("#reviewText").val('');
+    $("#releaseDate").val('');
+  })
+  .catch((error) => {
+    console.log('Error updating document:', error);
+  });
+});
+
+
+// Event listener for delete button click
+$('#reviewList').on('click', '.delete-review', function() {
+  // Get the review ID from the data attribute
+  const reviewId = $(this).data('review-id');
+  // Delete the review from the Firestore database
+  const docRef = doc(db, "movie_review", reviewId);
+  deleteDoc(docRef).then(() => {
+    console.log("Review successfully deleted!");
+  }).catch((error) => {
+    console.error("Error removing review: ", error);
+  });
+});
+
+// Loop through snapshot data and add to HTML table
+var tableRows = '';
+snapshot.forEach((doc) => {
+  var review = doc.data();
+  var editButton = '<button class="btn btn-secondary btn-sm mx-1 edit-review" data-review-id="' + doc.id + '">Edit</button>';
+  var deleteButton = '<button class="btn btn-danger btn-sm delete-review" data-review-id="' + doc.id + '">Delete</button>';
+  tableRows += '<tr>';
+  tableRows += '<td>' + doc.data().movie_name + '</td>';
+  tableRows += '<td>' + doc.data().director_name + '</td>';
+  tableRows += '<td>' + doc.data().movie_rating + '/5</td>';
+  tableRows +='<td>'  + doc.data().movie_review +'</td>';
+  tableRows +='<td>'  + doc.data().release_date +'</td>';
+  tableRows += '<td>' + editButton + '</td>';
+  tableRows += '<td>' + deleteButton + '</td>';
+  tableRows += '</tr>';
+});
+
+var table = $('<table>').addClass('table table-striped');
+var headerRow = $('<tr>').append($('<th>').text('Movie Name'),$('<th>').text('Director'), $('<th>').text('Rating'),$('<th>').text('Review'),$('<th>').text('Date'));
+table.append(headerRow);
+table.append(tableRows);
+
+$('#reviewList').append(table);
+
+
+    // Display review count
+    $('#mainTitle').html(snapshot.size + " Movie reviews in the list");
+  });
+
+</script>
+
+<!-- Bootstrap JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+	</script>
+  
+	   
+</form>
